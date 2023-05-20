@@ -16,7 +16,7 @@ jobs:
         go-version: 1.19
 
     - name: Build
-      run: go build main.go -o oidc-debug-linux
+      run: go build -o oidc-debug-linux main.go
 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.1.2
