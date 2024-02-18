@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/strifel/openid-connect-debugger/flag_parsing"
 	getcode "github.com/strifel/openid-connect-debugger/get_code"
 	gettoken "github.com/strifel/openid-connect-debugger/get_token"
-	"github.com/strifel/openid-connect-debugger/start_connection"
+	startconnection "github.com/strifel/openid-connect-debugger/start_connection"
 	userdata "github.com/strifel/openid-connect-debugger/user_data"
 )
 
@@ -15,6 +16,8 @@ func main() {
 	endpointUrl := flag.String("endpoint", "", "URL to instance")
 	clientId := flag.String("clientid", "", "Client ID")
 	secret := flag.String("secret", "", "Client Secret")
+	var scopes flag_parsing.ScopeFlags
+	flag.Var(&scopes, "scope", "Specify scopes (e.g. -scope profile -scope openid)")
 	verbosity := flag.Int("verbosity", 0, "Verbosity level (0 to 3). 2 is verbose, 3 shows the access token")
 	macosOpen := flag.Bool("macosopen", false, "Open the browser on MacOS")
 
@@ -54,7 +57,7 @@ func main() {
 
 	fmt.Println("Starting authorization phase")
 	fmt.Println("Please add http://localhost:8070/callback as valid redirect URI to your client")
-	authUrl := information.AuthorizationEndpoint + "?client_id=" + *clientId + "&response_type=code&scope=openid&redirect_uri=http://localhost:8070/callback"
+	authUrl := information.AuthorizationEndpoint + "?client_id=" + *clientId + "&response_type=code&scope=" + scopes.String() + "&redirect_uri=http://localhost:8070/callback"
 	fmt.Println("Then visit ", authUrl)
 
 	if *macosOpen {
