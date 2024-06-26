@@ -5,14 +5,15 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	nurl "net/url"
 )
 
-func Fetch(url string, id string, secret string, code string) (CodeResponse, error) {
+func Fetch(url string, id string, secret string, code string, callbackEndpoint string) (CodeResponse, error) {
 	resp, err := http.PostForm(url, nurl.Values{
 		"client_id":     {id},
 		"client_secret": {secret},
-		"redirect_uri":  {"http://localhost:8070/callback"},
+		"redirect_uri":  {"http://" + callbackEndpoint + ":8070/callback"},
 		"grant_type":    {"authorization_code"},
 		"code":          {code},
 	})
@@ -22,7 +23,7 @@ func Fetch(url string, id string, secret string, code string) (CodeResponse, err
 	}
 
 	if resp.StatusCode != 200 {
-		return CodeResponse{}, errors.New("status code not 200")
+		return CodeResponse{}, errors.New("HTTP " + strconv.Itoa(resp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)

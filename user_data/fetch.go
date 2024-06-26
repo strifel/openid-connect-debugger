@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 func Fetch(url string, token string) (UserInfo, string, error) {
@@ -24,7 +25,7 @@ func Fetch(url string, token string) (UserInfo, string, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return UserInfo{}, "", errors.New("status code not 200")
+		return UserInfo{}, "", errors.New("HTTP " + strconv.Itoa(resp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)

@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func GetCode() string {
-	srv := &http.Server{Addr: ":8070"}
+func GetCode(callbackEndpoint string) string {
+	srv := &http.Server{Addr: callbackEndpoint + ":8070"}
 	code := ""
 
 	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
