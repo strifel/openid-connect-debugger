@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os/exec"
 
 	"github.com/strifel/openid-connect-debugger/flag_parsing"
@@ -10,7 +9,9 @@ import (
 	gettoken "github.com/strifel/openid-connect-debugger/get_token"
 	startconnection "github.com/strifel/openid-connect-debugger/start_connection"
 	userdata "github.com/strifel/openid-connect-debugger/user_data"
-)
+
+
+	logging "github.com/strifel/openid-connect-debugger/logging")
 
 func main() {
 	endpointUrl := flag.String("endpoint", "", "URL to instance")
@@ -20,96 +21,102 @@ func main() {
 	flag.Var(&scopes, "scope", "Specify scopes (e.g. -scope profile -scope openid)")
 	verbosity := flag.Int("verbosity", 0, "Verbosity level (0 to 3). 2 is verbose, 3 shows the access token")
 	macosOpen := flag.Bool("macosopen", false, "Open the browser on MacOS")
-
+	callbackEndpoint := flag.String("callbackurl", "", "Callback endpoint. Default http://localhost")
+	
 	flag.Parse()
 
 	if *endpointUrl == "" {
-		fmt.Println("No endpoint URL given")
+		logging.Error("No endpoint URL given")
 		return
 	}
 
 	if *clientId == "" {
-		fmt.Println("No client ID given")
+		logging.Error("No client ID given")
 		return
 	}
 
 	if *secret == "" {
-		fmt.Println("No secret given")
+		logging.Error("No secret given")
 		return
 	}
 
+	if *callbackEndpoint == "" {
+		*callbackEndpoint = "localhost"
+	}
+
 	wellKnownURL := *endpointUrl + "/.well-known/openid-configuration"
-	fmt.Println("Starting connection to", wellKnownURL)
+	logging.Info("Starting connection to %s", wellKnownURL)
 	information, err := startconnection.Fetch(wellKnownURL)
 	if err != nil {
-		fmt.Println(err)
+		logging.Error("%v", err)
 		return
 	}
 
 	if *verbosity >= 2 {
-		fmt.Println("Issuer: ", information.Issuer)
-		fmt.Println("Authorization endpoint: ", information.AuthorizationEndpoint)
-		fmt.Println("Token endpoint: ", information.TokenEndpoint)
-		fmt.Println("Userinfo endpoint: ", information.UserinfoEndpoint)
+		logging.Debug("Issuer:                 %s", information.Issuer)
+		logging.Debug("Authorization endpoint: %s", information.AuthorizationEndpoint)
+		logging.Debug("Token endpoint:         %s", information.TokenEndpoint)
+		logging.Debug("Userinfo endpoint:      %s", information.UserinfoEndpoint)
 	}
 
-	fmt.Println("Read data")
+	logging.Info("Read data")
 
-	fmt.Println("Starting authorization phase")
-	fmt.Println("Please add http://localhost:8070/callback as valid redirect URI to your client")
-	authUrl := information.AuthorizationEndpoint + "?client_id=" + *clientId + "&response_type=code&scope=" + scopes.String() + "&redirect_uri=http://localhost:8070/callback"
-	fmt.Println("Then visit ", authUrl)
+	logging.Info("Starting authorization phase")
+	callbackURL := "http://" + *callbackEndpoint + ":8070/callback"
+	logging.Info("Please add " + callbackURL + " as valid redirect URI to your client")
+	authUrl := information.AuthorizationEndpoint + "?client_id=" + *clientId + "&response_type=code&scope=" + scopes.String() + "&redirect_uri=" + callbackURL
+	logging.Info("Then visit %s", authUrl)
 
 	if *macosOpen {
 		exec.Command("open", authUrl).Run()
 	}
 
-	code := getcode.GetCode()
+	code := getcode.GetCode(*callbackEndpoint)
 
 	if *verbosity >= 2 {
-		fmt.Println("Got code: ", code)
+		logging.Debug("Query Client code %s", code)
 	}
 
-	fmt.Println("Completed authorization phase")
+	logging.Success("Completed authorization phase")
 
-	fmt.Println("Starting token phase")
-	token, err := gettoken.Fetch(information.TokenEndpoint, *clientId, *secret, code)
+	logging.Info("Starting token phase")
+	token, err := gettoken.Fetch(information.TokenEndpoint, *clientId, *secret, code, *callbackEndpoint)
 	if err != nil {
-		fmt.Println(err)
+		logging.Error("%v", err)
 		return
 	}
 	if *verbosity >= 3 {
-		fmt.Println("Access token: ", token.AccessToken)
-		fmt.Println("Refresh token: ", token.RefreshToken)
+		logging.Debug("Access token:\n%s", token.AccessToken)
+		logging.Debug("Refresh token:\n%s", token.RefreshToken)
 	}
 	if *verbosity >= 2 {
-		fmt.Println("Session state: ", token.SessionState)
-		fmt.Println("Access token expires in: ", token.ExpiresIn)
-		fmt.Println("Refresh token expires in: ", token.RefreshExpiresIn)
-		fmt.Println("Not before policy: ", token.NotBeforePolicy)
-		fmt.Println("Scope: ", token.Scope)
+		logging.Debug("Session state:	%s", token.SessionState)
+		logging.Debug("Access token TTL:	%d", token.ExpiresIn)
+		logging.Debug("Refresh token TTL:	%d", token.RefreshExpiresIn)
+		logging.Debug("Not before policy:	%d", token.NotBeforePolicy)
+		logging.Debug("Scope:		%s", token.Scope)
 	}
 
-	fmt.Println("Completed token phase")
+	logging.Success("Completed token phase")
 
-	fmt.Println("Starting userinfo phase")
+	logging.Info("Starting userinfo phase")
 	userinfo, rawUser, err := userdata.Fetch(information.UserinfoEndpoint, token.AccessToken)
 	if err != nil {
-		fmt.Println(err)
+		logging.Error("%v", err)
 		return
 	}
 	if *verbosity >= 1 {
-		fmt.Println("Username: ", userinfo.PreferredUsername)
-		fmt.Println("Email: ", userinfo.Email)
-		fmt.Println("Email verified: ", userinfo.EmailVerified)
-		fmt.Println("Name: ", userinfo.Name)
-		fmt.Println("Family name: ", userinfo.FamilyName)
-		fmt.Println("Given name: ", userinfo.GivenName)
-		fmt.Println("Sub: ", userinfo.Sub)
+		logging.Info("Username:		%s", userinfo.PreferredUsername)
+		logging.Info("Email:		%s", userinfo.Email)
+		logging.Info("Email verified:	%t", userinfo.EmailVerified)
+		logging.Info("Name:		%s", userinfo.Name)
+		logging.Info("Family name:		%s", userinfo.FamilyName)
+		logging.Info("Given name:		%s", userinfo.GivenName)
+		logging.Info("Sub:			%s", userinfo.Sub)
 	}
 	if *verbosity >= 2 {
-		fmt.Println("Raw User Data: ", rawUser)
+		logging.Debug("Raw User Data: %s", rawUser)
 	}
 
-	fmt.Println("Completed userinfo phase")
+	logging.Success("Completed userinfo phase")
 }
