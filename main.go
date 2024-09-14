@@ -10,8 +10,8 @@ import (
 	startconnection "github.com/strifel/openid-connect-debugger/start_connection"
 	userdata "github.com/strifel/openid-connect-debugger/user_data"
 
-
-	logging "github.com/strifel/openid-connect-debugger/logging")
+	logging "github.com/strifel/openid-connect-debugger/logging"
+)
 
 func main() {
 	endpointUrl := flag.String("endpoint", "", "URL to instance")
@@ -22,7 +22,7 @@ func main() {
 	verbosity := flag.Int("verbosity", 0, "Verbosity level (0 to 3). 2 is verbose, 3 shows the access token")
 	macosOpen := flag.Bool("macosopen", false, "Open the browser on MacOS")
 	callbackEndpoint := flag.String("callbackurl", "", "Callback endpoint. Default http://localhost")
-	
+
 	flag.Parse()
 
 	if *endpointUrl == "" {
@@ -88,6 +88,7 @@ func main() {
 	if *verbosity >= 3 {
 		logging.Debug("Access token:\n%s", token.AccessToken)
 		logging.Debug("Refresh token:\n%s", token.RefreshToken)
+		logging.Debug("ID Token:\n%s", token.IDToken)
 	}
 	if *verbosity >= 2 {
 		logging.Debug("Session state:	%s", token.SessionState)

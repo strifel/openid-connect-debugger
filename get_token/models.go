@@ -8,5 +8,6 @@ type CodeResponse struct {
 	RefreshExpiresIn int    `json:"refresh_expires_in"`
 	NotBeforePolicy  int    `json:"not-before-policy"`
 	SessionState     string `json:"session_state"`
+	IDToken          string `json:"id_token"`
 	Scope            string `json:"scope"`
 }
